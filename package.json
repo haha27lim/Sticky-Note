@@ -1,0 +1,57 @@
+{
+  "name": "sticky-notepad",
+  "version": "1.0.0",
+  "description": "A transparent, always-on-top sticky notepad for interviews and presentations",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "dist": "electron-builder --publish=never",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["notepad", "sticky", "transparent", "always-on-top", "interview"],
+  "author": "Manus AI",
+  "license": "MIT",
+  "build": {
+    "appId": "com.manus.sticky-notepad",
+    "productName": "Sticky Notepad",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "index.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64", "ia32"]
+        }
+      ],
+      "icon": null,
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sticky Notepad"
+    },
+    "portable": {
+      "artifactName": "StickyNotepad-Portable-${version}.${ext}"
+    }
+  },
+  "devDependencies": {
+    "electron": "^37.2.5",
+    "electron-builder": "^25.1.8"
+  }
+}
+

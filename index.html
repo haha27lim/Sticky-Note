@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beautiful Sticky Notepad</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: transparent;
+            overflow: hidden;
+            user-select: none;
+            -webkit-app-region: drag;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .notepad-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.1),
+                0 2px 8px rgba(0, 0, 0, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .notepad-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.03) 50%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .notepad-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 40px rgba(0, 0, 0, 0.15),
+                0 4px 12px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .title-bar {
+            height: 32px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            border-radius: 16px 16px 0 0;
+            -webkit-app-region: drag;
+            position: relative;
+            z-index: 2;
+        }
+
+        .title {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .title-icon {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .controls {
+            display: flex;
+            gap: 6px;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            opacity: 0.7;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .control-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .control-btn:hover::before {
+            opacity: 1;
+        }
+
+        .close-btn {
+            background: linear-gradient(135deg, #ff5f57, #ff4444);
+        }
+
+        .minimize-btn {
+            background: linear-gradient(135deg, #ffbd2e, #ffaa00);
+        }
+
+        .settings-btn {
+            background: linear-gradient(135deg, #28ca42, #22a335);
+        }
+
+        .stealth-btn {
+            background: linear-gradient(135deg, #007AFF, #0056cc);
+        }
+
+        .textarea-container {
+            flex: 1;
+            padding: 16px;
+            -webkit-app-region: no-drag;
+            position: relative;
+            z-index: 2;
+        }
+
+        #notepad-textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.95);
+            resize: none;
+            -webkit-app-region: no-drag;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+            padding: 8px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        #notepad-textarea:focus {
+            background: rgba(255, 255, 255, 0.03);
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #notepad-textarea::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+            font-style: italic;
+            font-weight: 300;
+        }
+
+        .settings-panel {
+            position: absolute;
+            top: 40px;
+            right: 12px;
+            width: 240px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.8));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.4),
+                0 8px 24px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: none;
+            -webkit-app-region: no-drag;
+            z-index: 1000;
+            animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .settings-panel.show {
+            display: block;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .setting-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .setting-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+
+        .opacity-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            outline: none;
+            margin: 8px 0;
+        }
+
+        .opacity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #007AFF, #0056cc);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .opacity-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 4px 12px rgba(0, 122, 255, 0.4);
+        }
+
+        .stealth-controls {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .stealth-btn-panel {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.5px;
+        }
+
+        .stealth-btn-panel:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .stealth-btn-panel.active {
+            background: linear-gradient(135deg, #007AFF, #0056cc);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+        }
+
+        .color-preset {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            margin: 2px;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .color-preset::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .color-preset:hover {
+            transform: scale(1.15);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .color-preset:hover::before {
+            opacity: 1;
+        }
+
+        .color-preset.active {
+            border-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+
+        .status-bar {
+            height: 24px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            border-radius: 0 0 16px 16px;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .char-count {
+            margin-left: auto;
+            font-weight: 500;
+        }
+
+        .stealth-mode {
+            opacity: 0.05 !important;
+        }
+
+        .shortcuts-info {
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 16px;
+            line-height: 1.4;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .shortcuts-info strong {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 600;
+        }
+
+        .background-picker {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .bg-option {
+            width: 100%;
+            height: 32px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .bg-option:hover {
+            transform: scale(1.05);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .bg-option.active {
+            border-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+
+        .bg-gradient-1 { background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); }
+        .bg-gradient-2 { background: linear-gradient(135deg, rgba(255, 182, 193, 0.1), rgba(255, 182, 193, 0.05)); }
+        .bg-gradient-3 { background: linear-gradient(135deg, rgba(173, 216, 230, 0.1), rgba(173, 216, 230, 0.05)); }
+        .bg-gradient-4 { background: linear-gradient(135deg, rgba(144, 238, 144, 0.1), rgba(144, 238, 144, 0.05)); }
+        .bg-gradient-5 { background: linear-gradient(135deg, rgba(255, 218, 185, 0.1), rgba(255, 218, 185, 0.05)); }
+        .bg-gradient-6 { background: linear-gradient(135deg, rgba(221, 160, 221, 0.1), rgba(221, 160, 221, 0.05)); }
+        .bg-gradient-7 { background: linear-gradient(135deg, rgba(255, 255, 224, 0.1), rgba(255, 255, 224, 0.05)); }
+        .bg-gradient-8 { background: linear-gradient(135deg, rgba(240, 248, 255, 0.1), rgba(240, 248, 255, 0.05)); }
+
+        .font-selector {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .font-option {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 9px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .font-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .font-option.active {
+            background: linear-gradient(135deg, #007AFF, #0056cc);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .font-option.mono { font-family: 'JetBrains Mono', monospace; }
+        .font-option.sans { font-family: 'Inter', sans-serif; }
+        .font-option.serif { font-family: 'Georgia', serif; }
+    </style>
+</head>
+<body>
+    <div class="notepad-container" id="notepad-container">
+        <div class="title-bar">
+            <div class="title">
+                <span class="title-icon">📝</span>
+                Beautiful Sticky Notepad
+            </div>
+            <div class="controls">
+                <button class="control-btn stealth-btn" id="stealth-btn" title="Stealth Mode">👁</button>
+                <button class="control-btn settings-btn" id="settings-btn" title="Settings">⚙</button>
+                <button class="control-btn minimize-btn" id="minimize-btn" title="Minimize">−</button>
+                <button class="control-btn close-btn" id="close-btn" title="Close">×</button>
+            </div>
+        </div>
+
+        <div class="textarea-container">
+            <textarea 
+                id="notepad-textarea" 
+                placeholder="✨ Beautiful sticky notes for your productivity...&#10;&#10;🎨 Modern glassmorphism design&#10;📝 Elegant typography with JetBrains Mono&#10;🎯 Customizable backgrounds and colors&#10;⚡ Quick shortcuts: Ctrl+Shift+N"
+                spellcheck="false"
+            ></textarea>
+        </div>
+
+        <div class="status-bar">
+            <span id="stealth-status">Stealth Mode: OFF</span>
+            <span class="char-count" id="char-count">0 chars</span>
+        </div>
+
+        <div class="settings-panel" id="settings-panel">
+            <div class="setting-group">
+                <label class="setting-label">Transparency</label>
+                <input type="range" class="opacity-slider" id="opacity-slider" min="10" max="100" value="80">
+                <div style="font-size: 9px; color: rgba(255, 255, 255, 0.6); margin-top: 4px;">
+                    <span id="opacity-value">80</span>% opacity
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Stealth Controls</label>
+                <div class="stealth-controls">
+                    <div class="stealth-btn-panel" id="ghost-mode">Ghost</div>
+                    <div class="stealth-btn-panel" id="normal-mode">Normal</div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Background Style</label>
+                <div class="background-picker">
+                    <div class="bg-option bg-gradient-1 active" data-bg="gradient-1" title="Glass"></div>
+                    <div class="bg-option bg-gradient-2" data-bg="gradient-2" title="Pink"></div>
+                    <div class="bg-option bg-gradient-3" data-bg="gradient-3" title="Blue"></div>
+                    <div class="bg-option bg-gradient-4" data-bg="gradient-4" title="Green"></div>
+                    <div class="bg-option bg-gradient-5" data-bg="gradient-5" title="Orange"></div>
+                    <div class="bg-option bg-gradient-6" data-bg="gradient-6" title="Purple"></div>
+                    <div class="bg-option bg-gradient-7" data-bg="gradient-7" title="Yellow"></div>
+                    <div class="bg-option bg-gradient-8" data-bg="gradient-8" title="Light Blue"></div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Font Family</label>
+                <div class="font-selector">
+                    <div class="font-option mono active" data-font="mono">Mono</div>
+                    <div class="font-option sans" data-font="sans">Sans</div>
+                    <div class="font-option serif" data-font="serif">Serif</div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Text Color</label>
+                <input type="color" class="setting-input" id="text-color" value="#ffffff">
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Font Size</label>
+                <input type="range" class="setting-input" id="font-size" min="10" max="18" value="13">
+                <div style="font-size: 9px; color: rgba(255, 255, 255, 0.6); margin-top: 4px;">
+                    <span id="font-size-value">13</span>px
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Stealth Controls</label>
+                <div class="stealth-controls">
+                    <div class="stealth-btn-panel" id="ghost-mode">Ghost</div>
+                    <div class="stealth-btn-panel active" id="normal-mode">Normal</div>
+                </div>
+            </div>
+
+            <div class="shortcuts-info">
+                <strong>Keyboard Shortcuts:</strong><br>
+                Ctrl+Shift+N: Toggle visibility<br>
+                Ctrl+Shift+H: Hide completely<br>
+                Ctrl+Shift+S: Show window
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        // Elements
+        const textarea = document.getElementById('notepad-textarea');
+        const charCount = document.getElementById('char-count');
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeBtn = document.getElementById('close-btn');
+        const minimizeBtn = document.getElementById('minimize-btn');
+        const stealthBtn = document.getElementById('stealth-btn');
+        const opacitySlider = document.getElementById('opacity-slider');
+        const opacityValue = document.getElementById('opacity-value');
+        const textColorInput = document.getElementById('text-color');
+        const fontSizeSlider = document.getElementById('font-size');
+        const fontSizeValue = document.getElementById('font-size-value');
+        const notepadContainer = document.getElementById('notepad-container');
+        const bgOptions = document.querySelectorAll('.bg-option');
+        const fontOptions = document.querySelectorAll('.font-option');
+        const ghostModeBtn = document.getElementById('ghost-mode');
+        const normalModeBtn = document.getElementById('normal-mode');
+        const stealthStatus = document.getElementById('stealth-status');
+
+        // Background gradients
+        const backgroundGradients = {
+            'gradient-1': 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05))',
+            'gradient-2': 'linear-gradient(135deg, rgba(255, 182, 193, 0.1), rgba(255, 182, 193, 0.05))',
+            'gradient-3': 'linear-gradient(135deg, rgba(173, 216, 230, 0.1), rgba(173, 216, 230, 0.05))',
+            'gradient-4': 'linear-gradient(135deg, rgba(144, 238, 144, 0.1), rgba(144, 238, 144, 0.05))',
+            'gradient-5': 'linear-gradient(135deg, rgba(255, 218, 185, 0.1), rgba(255, 218, 185, 0.05))',
+            'gradient-6': 'linear-gradient(135deg, rgba(221, 160, 221, 0.1), rgba(221, 160, 221, 0.05))',
+            'gradient-7': 'linear-gradient(135deg, rgba(255, 255, 224, 0.1), rgba(255, 255, 224, 0.05))',
+            'gradient-8': 'linear-gradient(135deg, rgba(240, 248, 255, 0.1), rgba(240, 248, 255, 0.05))'
+        };
+
+        // Font families
+        const fontFamilies = {
+            'mono': "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+            'sans': "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            'serif': "'Georgia', 'Times New Roman', serif"
+        };
+
+        // Load saved settings
+        const savedSettings = JSON.parse(localStorage.getItem('beautifulNotepadSettings') || '{}');
+        const settings = {
+            opacity: savedSettings.opacity || 80,
+            backgroundGradient: savedSettings.backgroundGradient || 'gradient-1',
+            fontFamily: savedSettings.fontFamily || 'mono',
+            textColor: savedSettings.textColor || '#ffffff',
+            fontSize: savedSettings.fontSize || 13,
+            text: savedSettings.text || '',
+            stealthMode: savedSettings.stealthMode || false
+        };
+
+        let isStealthMode = false;
+
+        // Apply saved settings
+        function applySettings() {
+            opacitySlider.value = settings.opacity;
+            opacityValue.textContent = settings.opacity;
+            textColorInput.value = settings.textColor;
+            fontSizeSlider.value = settings.fontSize;
+            fontSizeValue.textContent = settings.fontSize;
+            textarea.value = settings.text;
+            
+            // Apply background gradient
+            updateBackgroundGradient(settings.backgroundGradient);
+            
+            // Apply font family
+            updateFontFamily(settings.fontFamily);
+            
+            updateAppearance();
+            updateCharCount();
+            updateStealthStatus();
+        }
+
+        // Update background gradient
+        function updateBackgroundGradient(gradientKey) {
+            notepadContainer.style.background = backgroundGradients[gradientKey];
+            
+            // Update active state
+            bgOptions.forEach(option => {
+                option.classList.remove('active');
+                if (option.getAttribute('data-bg') === gradientKey) {
+                    option.classList.add('active');
+                }
+            });
+        }
+
+        // Update font family
+        function updateFontFamily(fontKey) {
+            textarea.style.fontFamily = fontFamilies[fontKey];
+            
+            // Update active state
+            fontOptions.forEach(option => {
+                option.classList.remove('active');
+                if (option.getAttribute('data-font') === fontKey) {
+                    option.classList.add('active');
+                }
+            });
+        }
+
+        // Update appearance
+        function updateAppearance() {
+            const opacity = opacitySlider.value;
+            const textColor = textColorInput.value;
+            const fontSize = fontSizeSlider.value;
+
+            // Update text appearance
+            textarea.style.color = textColor;
+            textarea.style.fontSize = fontSize + 'px';
+
+            // Update window opacity via IPC
+            ipcRenderer.invoke('set-opacity', opacity);
+
+            // Update settings
+            settings.opacity = parseInt(opacity);
+            settings.textColor = textColor;
+            settings.fontSize = parseInt(fontSize);
+        }
+
+        // Save settings
+        function saveSettings() {
+            settings.text = textarea.value;
+            settings.stealthMode = isStealthMode;
+            localStorage.setItem('beautifulNotepadSettings', JSON.stringify(settings));
+        }
+
+        // Update character count
+        function updateCharCount() {
+            const count = textarea.value.length;
+            charCount.textContent = `${count} chars`;
+        }
+
+        // Update stealth status
+        function updateStealthStatus() {
+            stealthStatus.textContent = `Stealth Mode: ${isStealthMode ? 'ON' : 'OFF'}`;
+        }
+
+        // Toggle stealth mode
+        function toggleStealthMode() {
+            isStealthMode = !isStealthMode;
+            ipcRenderer.invoke('set-stealth-mode', isStealthMode);
+            
+            if (isStealthMode) {
+                notepadContainer.classList.add('stealth-mode');
+                ghostModeBtn.classList.add('active');
+                normalModeBtn.classList.remove('active');
+                opacitySlider.value = 20;
+                opacityValue.textContent = '20';
+            } else {
+                notepadContainer.classList.remove('stealth-mode');
+                normalModeBtn.classList.add('active');
+                ghostModeBtn.classList.remove('active');
+                opacitySlider.value = 80;
+                opacityValue.textContent = '80';
+            }
+            
+            updateAppearance();
+            updateStealthStatus();
+            saveSettings();
+        }
+
+        // Event listeners
+        settingsBtn.addEventListener('click', () => {
+            settingsPanel.classList.toggle('show');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            saveSettings();
+            ipcRenderer.invoke('close-window');
+        });
+
+        minimizeBtn.addEventListener('click', () => {
+            ipcRenderer.invoke('minimize-window');
+        });
+
+        stealthBtn.addEventListener('click', toggleStealthMode);
+
+        opacitySlider.addEventListener('input', () => {
+            opacityValue.textContent = opacitySlider.value;
+            updateAppearance();
+        });
+
+        textColorInput.addEventListener('change', updateAppearance);
+
+        fontSizeSlider.addEventListener('input', () => {
+            fontSizeValue.textContent = fontSizeSlider.value;
+            updateAppearance();
+        });
+
+        textarea.addEventListener('input', () => {
+            updateCharCount();
+            saveSettings();
+        });
+
+        // Background gradient options
+        bgOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const gradientKey = option.getAttribute('data-bg');
+                settings.backgroundGradient = gradientKey;
+                updateBackgroundGradient(gradientKey);
+                saveSettings();
+            });
+        });
+
+        // Font family options
+        fontOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const fontKey = option.getAttribute('data-font');
+                settings.fontFamily = fontKey;
+                updateFontFamily(fontKey);
+                saveSettings();
+            });
+        });
+
+        // Stealth mode buttons
+        ghostModeBtn.addEventListener('click', () => {
+            if (!isStealthMode) toggleStealthMode();
+        });
+
+        normalModeBtn.addEventListener('click', () => {
+            if (isStealthMode) toggleStealthMode();
+        });
+
+        // Auto-save on blur
+        window.addEventListener('blur', saveSettings);
+
+        // Click outside settings to close
+        document.addEventListener('click', (e) => {
+            if (!settingsPanel.contains(e.target) && e.target !== settingsBtn) {
+                settingsPanel.classList.remove('show');
+            }
+        });
+
+        // Enhanced keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 's':
+                        e.preventDefault();
+                        saveSettings();
+                        break;
+                    case ',':
+                        e.preventDefault();
+                        settingsPanel.classList.toggle('show');
+                        break;
+                    case 'h':
+                        if (e.shiftKey) {
+                            e.preventDefault();
+                            if (!isStealthMode) toggleStealthMode();
+                        }
+                        break;
+                }
+            }
+        });
+
+        // Listen for display changes
+        ipcRenderer.on('display-changed', () => {
+            console.log('Display configuration changed');
+        });
+
+        // Initialize
+        applySettings();
+
+        // Auto-save every 15 seconds
+        setInterval(saveSettings, 15000);
+
+        // Focus management for stealth
+        window.addEventListener('focus', () => {
+            if (isStealthMode) {
+                setTimeout(() => {
+                    if (isStealthMode) {
+                        ipcRenderer.invoke('set-opacity', 20);
+                    }
+                }, 100);
+            }
+        });
+
+        window.addEventListener('blur', () => {
+            if (isStealthMode) {
+                ipcRenderer.invoke('set-opacity', 10);
+            }
+        });
+    </script>
+</body>
+</html>
+
