@@ -653,35 +653,51 @@
         // Load saved settings
         const savedSettings = JSON.parse(localStorage.getItem('beautifulNotepadSettings') || '{}');
         const settings = {
-            opacity: savedSettings.opacity || 80,
-            backgroundGradient: savedSettings.backgroundGradient || 'gradient-1',
-            fontFamily: savedSettings.fontFamily || 'mono',
-            textColor: savedSettings.textColor || '#ffffff',
-            fontSize: savedSettings.fontSize || 13,
             text: savedSettings.text || '',
+            opacity: savedSettings.opacity || 30,
+            textColor: savedSettings.textColor || '#ffffff',
+            fontSize: savedSettings.fontSize || 14,
+            backgroundGradient: savedSettings.backgroundGradient || 'gradient-1',
+            fontFamily: savedSettings.fontFamily || 'sans',
             stealthMode: savedSettings.stealthMode || false
         };
 
         let isStealthMode = false;
 
+        // Update the saveSettings function
+        function saveSettings() {
+            settings.text = textarea.innerHTML;  // Use innerHTML instead of value
+            settings.opacity = parseInt(opacitySlider.value);
+            settings.textColor = textColorInput.value;
+            settings.fontSize = parseInt(fontSizeSlider.value);
+            settings.backgroundGradient = settings.backgroundGradient;
+            settings.fontFamily = settings.fontFamily;
+            settings.stealthMode = isStealthMode;
+
+            localStorage.setItem('beautifulNotepadSettings', JSON.stringify(settings));
+        }
+
         // Apply saved settings
         function applySettings() {
+            if (settings.text) {
+                textarea.innerHTML = settings.text;  // Use innerHTML instead of value
+            }
             opacitySlider.value = settings.opacity;
             opacityValue.textContent = settings.opacity;
             textColorInput.value = settings.textColor;
             fontSizeSlider.value = settings.fontSize;
             fontSizeValue.textContent = settings.fontSize;
-            textarea.value = settings.text;
-
-            // Apply background gradient
             updateBackgroundGradient(settings.backgroundGradient);
-
-            // Apply font family
             updateFontFamily(settings.fontFamily);
-
             updateAppearance();
             updateCharCount();
             updateStealthStatus();
+        }
+
+        // Also update the character count function:
+        function updateCharCount() {
+            const count = textarea.textContent.length;
+            charCount.textContent = `${count} chars`;
         }
 
         // Update background gradient
@@ -729,19 +745,6 @@
             settings.fontSize = parseInt(fontSize);
         }
 
-        // Save settings
-        function saveSettings() {
-            settings.text = textarea.value;
-            settings.stealthMode = isStealthMode;
-            localStorage.setItem('beautifulNotepadSettings', JSON.stringify(settings));
-        }
-
-        // Update character count
-        function updateCharCount() {
-            const count = textarea.value.length;
-            charCount.textContent = `${count} chars`;
-        }
-
         // Update stealth status
         function updateStealthStatus() {
             stealthStatus.textContent = `Stealth Mode: ${isStealthMode ? 'ON' : 'OFF'}`;
@@ -772,6 +775,10 @@
         }
 
         // Event listeners
+        window.addEventListener('beforeunload', () => {
+            saveSettings();
+        });
+
         settingsBtn.addEventListener('click', () => {
             settingsPanel.classList.toggle('show');
         });
@@ -800,7 +807,15 @@
         });
 
         textarea.addEventListener('input', () => {
+            saveSettings(); // Save on every keystroke
             updateCharCount();
+        });
+
+        window.addEventListener("DOMContentLoaded", () => {
+            applySettings();
+        });
+
+        textarea.addEventListener('blur', () => {
             saveSettings();
         });
 

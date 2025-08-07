@@ -11,10 +11,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": ["notepad", "sticky", "transparent", "always-on-top", "interview"],
-  "author": "Manus AI",
-  "license": "MIT",
   "build": {
-    "appId": "com.manus.sticky-notepad",
+    "appId": "sticky-notepad",
     "productName": "Sticky Notepad",
     "directories": {
       "output": "dist"
