@@ -1,7 +1,8 @@
-const { app, BrowserWindow, Menu, ipcMain, globalShortcut, screen } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, globalShortcut, screen, Tray, nativeImage } = require("electron");
 const path = require("path");
 
 let mainWindow;
+let tray = null;
 
 function createWindow() {
   // Create the browser window with maximum transparency and stealth features
@@ -41,12 +42,12 @@ function createWindow() {
   // Show window when ready with enhanced stealth settings
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
-    
+
     // Set maximum stealth level
     mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
     mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     mainWindow.setFullScreenable(false);
-    
+
     // Try to make it as invisible as possible to screen capture
     try {
       // Windows-specific: Try to exclude from screen capture
@@ -68,14 +69,14 @@ function createWindow() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
       // Reduce opacity even further when not focused
-      mainWindow.setOpacity(0.2);
+      mainWindow.setOpacity(0.4);
     }
   });
 
   // Restore opacity when focused
   mainWindow.on("focus", () => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setOpacity(0.3); // Restore to visible but still very transparent
+      mainWindow.setOpacity(0.4); // Restore to visible but still very transparent
     }
   });
 
@@ -93,7 +94,7 @@ function createWindow() {
 app.disableHardwareAcceleration();
 
 app.whenReady().then(() => {
-  
+
   createWindow();
 
   // Register enhanced global shortcuts
@@ -147,6 +148,48 @@ app.whenReady().then(() => {
       mainWindow.webContents.send("display-changed");
     }
   });
+
+  // Create system tray icon
+  const iconPath = path.join(__dirname, 'assets', 'icon.png');
+  const trayIcon = nativeImage.createFromPath(iconPath);
+  trayIcon.setTemplateImage(true); // For macOS dark/light mode support
+
+  tray = new Tray(trayIcon);
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Show Notepad", click: () => {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    },
+    {
+      label: "Hide Notepad", click: () => {
+        mainWindow.hide();
+      }
+    },
+    {
+      type: "separator"
+    },
+    {
+      label: "Quit", click: () => {
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setToolTip("Stealth Notepad");
+  tray.setContextMenu(contextMenu);
+
+  // Enable left-click or right-click to open context menu
+  tray.on('click', () => {
+    tray.popUpContextMenu();
+  });
+
+  tray.on('right-click', () => {
+    tray.popUpContextMenu();
+  });
+
 });
 
 // Quit when all windows are closed
@@ -171,7 +214,7 @@ app.on("web-contents-created", (event, contents) => {
 // Enhanced IPC handlers
 ipcMain.handle("minimize-window", () => {
   if (mainWindow) {
-    mainWindow.minimize();
+    mainWindow.hide();
   }
 });
 

@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beautiful Sticky Notepad</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap"
+        rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -30,7 +33,7 @@
             background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 16px;
-            box-shadow: 
+            box-shadow:
                 0 8px 32px rgba(0, 0, 0, 0.1),
                 0 2px 8px rgba(0, 0, 0, 0.05),
                 inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -55,7 +58,7 @@
 
         .notepad-container:hover {
             transform: translateY(-2px);
-            box-shadow: 
+            box-shadow:
                 0 12px 40px rgba(0, 0, 0, 0.15),
                 0 4px 12px rgba(0, 0, 0, 0.08),
                 inset 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -176,6 +179,8 @@
             padding: 8px;
             border-radius: 8px;
             transition: all 0.3s ease;
+            white-space: pre-wrap;
+            overflow-y: auto;
         }
 
         #notepad-textarea:focus {
@@ -189,6 +194,13 @@
             font-weight: 300;
         }
 
+        #notepad-textarea:empty::before {
+            content: attr(data-placeholder);
+            color: rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+            position: absolute;
+        }
+
         .settings-panel {
             position: absolute;
             top: 40px;
@@ -198,7 +210,7 @@
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 12px;
             padding: 20px;
-            box-shadow: 
+            box-shadow:
                 0 20px 60px rgba(0, 0, 0, 0.4),
                 0 8px 24px rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(20px);
@@ -214,6 +226,7 @@
                 opacity: 0;
                 transform: translateY(-10px) scale(0.95);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0) scale(1);
@@ -424,14 +437,37 @@
             box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
         }
 
-        .bg-gradient-1 { background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)); }
-        .bg-gradient-2 { background: linear-gradient(135deg, rgba(255, 182, 193, 0.1), rgba(255, 182, 193, 0.05)); }
-        .bg-gradient-3 { background: linear-gradient(135deg, rgba(173, 216, 230, 0.1), rgba(173, 216, 230, 0.05)); }
-        .bg-gradient-4 { background: linear-gradient(135deg, rgba(144, 238, 144, 0.1), rgba(144, 238, 144, 0.05)); }
-        .bg-gradient-5 { background: linear-gradient(135deg, rgba(255, 218, 185, 0.1), rgba(255, 218, 185, 0.05)); }
-        .bg-gradient-6 { background: linear-gradient(135deg, rgba(221, 160, 221, 0.1), rgba(221, 160, 221, 0.05)); }
-        .bg-gradient-7 { background: linear-gradient(135deg, rgba(255, 255, 224, 0.1), rgba(255, 255, 224, 0.05)); }
-        .bg-gradient-8 { background: linear-gradient(135deg, rgba(240, 248, 255, 0.1), rgba(240, 248, 255, 0.05)); }
+        .bg-gradient-1 {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+        }
+
+        .bg-gradient-2 {
+            background: linear-gradient(135deg, rgba(255, 182, 193, 0.1), rgba(255, 182, 193, 0.05));
+        }
+
+        .bg-gradient-3 {
+            background: linear-gradient(135deg, rgba(173, 216, 230, 0.1), rgba(173, 216, 230, 0.05));
+        }
+
+        .bg-gradient-4 {
+            background: linear-gradient(135deg, rgba(144, 238, 144, 0.1), rgba(144, 238, 144, 0.05));
+        }
+
+        .bg-gradient-5 {
+            background: linear-gradient(135deg, rgba(255, 218, 185, 0.1), rgba(255, 218, 185, 0.05));
+        }
+
+        .bg-gradient-6 {
+            background: linear-gradient(135deg, rgba(221, 160, 221, 0.1), rgba(221, 160, 221, 0.05));
+        }
+
+        .bg-gradient-7 {
+            background: linear-gradient(135deg, rgba(255, 255, 224, 0.1), rgba(255, 255, 224, 0.05));
+        }
+
+        .bg-gradient-8 {
+            background: linear-gradient(135deg, rgba(240, 248, 255, 0.1), rgba(240, 248, 255, 0.05));
+        }
 
         .font-selector {
             display: flex;
@@ -461,11 +497,20 @@
             border-color: rgba(255, 255, 255, 0.3);
         }
 
-        .font-option.mono { font-family: 'JetBrains Mono', monospace; }
-        .font-option.sans { font-family: 'Inter', sans-serif; }
-        .font-option.serif { font-family: 'Georgia', serif; }
+        .font-option.mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .font-option.sans {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .font-option.serif {
+            font-family: 'Georgia', serif;
+        }
     </style>
 </head>
+
 <body>
     <div class="notepad-container" id="notepad-container">
         <div class="title-bar">
@@ -482,12 +527,11 @@
         </div>
 
         <div class="textarea-container">
-            <textarea 
-                id="notepad-textarea" 
-                placeholder="✨ Beautiful sticky notes for your productivity...&#10;&#10;🎨 Modern glassmorphism design&#10;📝 Elegant typography with JetBrains Mono&#10;🎯 Customizable backgrounds and colors&#10;⚡ Quick shortcuts: Ctrl+Shift+N"
-                spellcheck="false"
-            ></textarea>
+            <div id="notepad-textarea" contenteditable="true" spellcheck="false"
+                data-placeholder="✨ Beautiful sticky notes for your productivity..."></div>
         </div>
+
+
 
         <div class="status-bar">
             <span id="stealth-status">Stealth Mode: OFF</span>
@@ -566,7 +610,7 @@
 
     <script>
         const { ipcRenderer } = require('electron');
-        
+
         // Elements
         const textarea = document.getElementById('notepad-textarea');
         const charCount = document.getElementById('char-count');
@@ -628,13 +672,13 @@
             fontSizeSlider.value = settings.fontSize;
             fontSizeValue.textContent = settings.fontSize;
             textarea.value = settings.text;
-            
+
             // Apply background gradient
             updateBackgroundGradient(settings.backgroundGradient);
-            
+
             // Apply font family
             updateFontFamily(settings.fontFamily);
-            
+
             updateAppearance();
             updateCharCount();
             updateStealthStatus();
@@ -643,7 +687,7 @@
         // Update background gradient
         function updateBackgroundGradient(gradientKey) {
             notepadContainer.style.background = backgroundGradients[gradientKey];
-            
+
             // Update active state
             bgOptions.forEach(option => {
                 option.classList.remove('active');
@@ -656,7 +700,7 @@
         // Update font family
         function updateFontFamily(fontKey) {
             textarea.style.fontFamily = fontFamilies[fontKey];
-            
+
             // Update active state
             fontOptions.forEach(option => {
                 option.classList.remove('active');
@@ -707,7 +751,7 @@
         function toggleStealthMode() {
             isStealthMode = !isStealthMode;
             ipcRenderer.invoke('set-stealth-mode', isStealthMode);
-            
+
             if (isStealthMode) {
                 notepadContainer.classList.add('stealth-mode');
                 ghostModeBtn.classList.add('active');
@@ -721,7 +765,7 @@
                 opacitySlider.value = 80;
                 opacityValue.textContent = '80';
             }
-            
+
             updateAppearance();
             updateStealthStatus();
             saveSettings();
@@ -802,7 +846,7 @@
         // Enhanced keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
+                switch (e.key) {
                     case 's':
                         e.preventDefault();
                         saveSettings();
@@ -848,7 +892,41 @@
                 ipcRenderer.invoke('set-opacity', 10);
             }
         });
+
+        document.getElementById('notepad-textarea').addEventListener('paste', async (event) => {
+            const items = event.clipboardData.items;
+
+            for (const item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    const blob = item.getAsFile();
+                    const reader = new FileReader();
+
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.style.maxWidth = '100%';
+                        img.style.maxHeight = '300px';
+                        const sel = window.getSelection();
+                        if (!sel.rangeCount) return;
+                        sel.getRangeAt(0).insertNode(0);
+                        range.deleteContents();
+                        range.insertNode(img);
+
+                        // move cursor after image
+                        range.setStartAfter(img);
+                        range.setEndAfter(img);
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    };
+                };
+
+                reader.readAsDataURL(blob);
+                event.preventDefault(); // prevent default text paste
+            }
+        });
+
+
     </script>
 </body>
-</html>
 
+</html>
