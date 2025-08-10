@@ -1,12 +1,15 @@
 const { app, BrowserWindow, Menu, ipcMain, globalShortcut, screen, Tray, nativeImage } = require("electron");
 const path = require("path");
 
-let mainWindow;
+let windows = [];
 let tray = null;
+const iconPath = path.join(__dirname, 'assets', 'icon.png');
+const trayIcon = nativeImage.createFromPath(iconPath);
+trayIcon.setTemplateImage(true);
 
-function createWindow() {
+function createWindow(noteId = null) {
   // Create the browser window with maximum transparency and stealth features
-  mainWindow = new BrowserWindow({
+  const newWindow = new BrowserWindow({
     width: 400,
     height: 300,
     frame: true, // Remove window frame completely
@@ -37,22 +40,22 @@ function createWindow() {
   });
 
   // Load the HTML file
-  mainWindow.loadFile("index.html");
+  newWindow.loadFile("index.html");
 
   // Show window when ready with enhanced stealth settings
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
+  newWindow.once("ready-to-show", () => {
+    newWindow.show();
 
     // Set maximum stealth level
-    mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
-    mainWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-    mainWindow.setFullScreenable(false);
+    newWindow.setAlwaysOnTop(true, "screen-saver", 1);
+    newWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    newWindow.setFullScreenable(false);
 
     // Try to make it as invisible as possible to screen capture
     try {
       // Windows-specific: Try to exclude from screen capture
       if (process.platform === "win32") {
-        mainWindow.setContentProtection(true);
+        newWindow.setContentProtection(true);
       }
     } catch (error) {
       console.log("Content protection not available:", error.message);
@@ -60,34 +63,82 @@ function createWindow() {
   });
 
   // Handle window closed
-  mainWindow.on("closed", () => {
-    mainWindow = null;
+  newWindow.on("closed", () => {
+    windows = windows.filter(win => win !== newWindow);
+    updateTrayMenu();
   });
 
   // Maintain stealth when losing focus
-  mainWindow.on("blur", () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
+  newWindow.on("blur", () => {
+    if (newWindow && !newWindow.isDestroyed()) {
+      newWindow.setAlwaysOnTop(true, "screen-saver", 1);
       // Reduce opacity even further when not focused
-      mainWindow.setOpacity(0.4);
+      newWindow.setOpacity(0.4);
     }
   });
 
   // Restore opacity when focused
-  mainWindow.on("focus", () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setOpacity(0.4); // Restore to visible but still very transparent
+  newWindow.on("focus", () => {
+    if (newWindow && !newWindow.isDestroyed()) {
+      newWindow.setOpacity(0.4); // Restore to visible but still very transparent
     }
   });
 
   // Handle mouse enter/leave for dynamic visibility
-  mainWindow.on("enter-full-screen", () => {
-    mainWindow.setOpacity(0.01); // Nearly invisible in fullscreen
+  newWindow.on("enter-full-screen", () => {
+    newWindow.setOpacity(0.01); // Nearly invisible in fullscreen
   });
 
-  mainWindow.on("leave-full-screen", () => {
-    mainWindow.setOpacity(0.3);
+  newWindow.on("leave-full-screen", () => {
+    newWindow.setOpacity(0.3);
   });
+
+  newWindow.webContents.on("did-finish-load", () => {
+    newWindow.webContents.send("note-id", noteId || `${Date.now()}`);
+  });
+
+  windows.push(newWindow);
+  // Only update the tray menu if the tray exists
+  if (tray) {
+    updateTrayMenu();
+  }
+  return newWindow;
+}
+
+function updateTrayMenu() {
+  // Check if the tray object is initialized before using it
+  if (!tray) return;
+
+  const windowSubmenu = windows.map((win, index) => ({
+    label: `Note ${index + 1}`,
+    click: () => {
+      win.show();
+      win.focus();
+    }
+  }));
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "New Note",
+      click: () => {
+        createWindow();
+      }
+    },
+    {
+      type: "separator"
+    },
+    ...windowSubmenu,
+    {
+      type: "separator"
+    },
+    {
+      label: "Quit",
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+  tray.setContextMenu(contextMenu);
 }
 
 // Enhanced app initialization
@@ -95,81 +146,31 @@ app.disableHardwareAcceleration();
 
 app.whenReady().then(() => {
 
-  createWindow();
-
-  // Register enhanced global shortcuts
-  globalShortcut.register("CommandOrControl+Shift+N", () => {
-    if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-        mainWindow.focus();
-      }
-    }
-  });
-
-  // Emergency hide shortcut
-  globalShortcut.register("CommandOrControl+Shift+H", () => {
-    if (mainWindow) {
-      mainWindow.setOpacity(0.01); // Nearly invisible
-    }
-  });
-
-  // Restore visibility shortcut
-  globalShortcut.register("CommandOrControl+Shift+S", () => {
-    if (mainWindow) {
-      mainWindow.setOpacity(0.3); // Restore visibility
-      mainWindow.focus();
-    }
-  });
-
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-
-  // Handle display changes
-  screen.on("display-added", () => {
-    if (mainWindow) {
-      mainWindow.webContents.send("display-changed");
-    }
-  });
-
-  screen.on("display-removed", () => {
-    if (mainWindow) {
-      mainWindow.webContents.send("display-changed");
-    }
-  });
-
-  screen.on("display-metrics-changed", () => {
-    if (mainWindow) {
-      mainWindow.webContents.send("display-changed");
-    }
-  });
-
   // Create system tray icon
-  const iconPath = path.join(__dirname, 'assets', 'icon.png');
-  const trayIcon = nativeImage.createFromPath(iconPath);
-  trayIcon.setTemplateImage(true); // For macOS dark/light mode support
-
   tray = new Tray(trayIcon);
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: "Show Notepad", click: () => {
-        mainWindow.show();
-        mainWindow.focus();
+      label: "Show All Notes",
+      click: () => {
+        windows.forEach(win => {
+          win.show();
+          win.focus();
+        });
       }
     },
     {
-      label: "Hide Notepad", click: () => {
-        mainWindow.hide();
+      label: "Hide All Notepad",
+      click: () => {
+        windows.forEach(win => win.hide());
       }
     },
     {
       type: "separator"
+    },
+    {
+      label: "New Note",
+      click: () => createWindow()
     },
     {
       label: "Quit", click: () => {
@@ -188,6 +189,65 @@ app.whenReady().then(() => {
 
   tray.on('right-click', () => {
     tray.popUpContextMenu();
+  });
+
+  // Now that the tray exists, create the first window and update the menu
+  createWindow();
+  updateTrayMenu(); // Initial call to set the tray menu
+
+  // Register enhanced global shortcuts
+  globalShortcut.register("CommandOrControl+Shift+N", () => {
+    if (windows.length > 0) {
+      const activeWindow = BrowserWindow.getFocusedWindow();
+      if (activeWindow) {
+        if (activeWindow.isVisible()) {
+          activeWindow.hide();
+        } else {
+          activeWindow.show();
+          activeWindow.focus();
+        }
+      }
+    }
+  });
+
+  // Emergency hide shortcut
+  globalShortcut.register("CommandOrControl+Shift+H", () => {
+    if (windows.length > 0) {
+      const activeWindow = BrowserWindow.getFocusedWindow();
+      if (activeWindow) {
+        activeWindow.setOpacity(0.01);
+      }
+    } // Nearly invisible
+  });
+
+  // Restore visibility shortcut
+  globalShortcut.register("CommandOrControl+Shift+S", () => {
+    if (windows.length > 0) {
+      const activeWindow = BrowserWindow.getFocusedWindow();
+      if (activeWindow) {
+        activeWindow.setOpacity(0.3); // Restore visibility
+        activeWindow.focus();
+      }
+    }
+  });
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+
+  // Handle display changes
+  screen.on("display-added", () => {
+    windows.forEach(win => win.webContents.send("display-changed"));
+  });
+
+  screen.on("display-removed", () => {
+    windows.forEach(win => win.webContents.send("display-changed"));
+  });
+
+  screen.on("display-metrics-changed", () => {
+    windows.forEach(win => win.webContents.send("display-changed"));
   });
 
 });
@@ -212,44 +272,56 @@ app.on("web-contents-created", (event, contents) => {
 });
 
 // Enhanced IPC handlers
-ipcMain.handle("minimize-window", () => {
-  if (mainWindow) {
-    mainWindow.hide();
+ipcMain.handle("create-new-note", () => {
+  createWindow();
+});
+
+ipcMain.handle("minimize-window", (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window && !window.isDestroyed()) {
+    window.hide(); // Change hide() to minimize()
   }
 });
 
-ipcMain.handle("close-window", () => {
-  if (mainWindow) {
-    mainWindow.close();
+ipcMain.handle("close-window", (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window && !window.isDestroyed()) {
+    window.close();
+    // Remove from windows array
+    windows = windows.filter(win => win !== window);
+    updateTrayMenu();
   }
 });
 
 ipcMain.handle("set-opacity", (event, opacity) => {
-  if (mainWindow) {
-    mainWindow.setOpacity(opacity / 100);
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window) {
+    window.setOpacity(opacity / 100);
     return opacity;
   }
   return 30;
 });
 
 ipcMain.handle("toggle-always-on-top", () => {
-  if (mainWindow) {
-    const isOnTop = mainWindow.isAlwaysOnTop();
-    mainWindow.setAlwaysOnTop(!isOnTop, "screen-saver", 1);
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window) {
+    const isOnTop = window.isAlwaysOnTop();
+    window.setAlwaysOnTop(!isOnTop, "screen-saver", 1);
     return !isOnTop;
   }
   return false;
 });
 
 ipcMain.handle("set-stealth-mode", (event, enabled) => {
-  if (mainWindow) {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window) {
     if (enabled) {
-      mainWindow.setOpacity(0.05);
-      mainWindow.setSkipTaskbar(true);
-      mainWindow.setAlwaysOnTop(true, "screen-saver", 1);
+      window.setOpacity(0.05);
+      window.setSkipTaskbar(true);
+      window.setAlwaysOnTop(true, "screen-saver", 1);
     } else {
-      mainWindow.setOpacity(0.3);
-      mainWindow.setSkipTaskbar(false);
+      window.setOpacity(0.3);
+      window.setSkipTaskbar(false);
     }
     return enabled;
   }

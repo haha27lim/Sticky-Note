@@ -78,6 +78,11 @@
             z-index: 2;
         }
 
+        .title-bar button {
+            -webkit-app-region: no-drag;
+            cursor: pointer;
+        }
+
         .title {
             font-size: 12px;
             color: rgba(255, 255, 255, 0.9);
@@ -136,6 +141,10 @@
 
         .control-btn:hover::before {
             opacity: 1;
+        }
+
+        .plus-btn {
+            background: linear-gradient(135deg, #28ca42, #22a335);
         }
 
         .close-btn {
@@ -508,6 +517,43 @@
         .font-option.serif {
             font-family: 'Georgia', serif;
         }
+
+        .notepad-toolbar {
+            height: 32px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            border-radius: 0 0 16px 16px;
+            position: relative;
+            z-index: 2;
+            -webkit-app-region: no-drag;
+        }
+
+        .toolbar-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            margin-right: 8px;
+        }
+
+        .toolbar-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .toolbar-btn.active {
+            opacity: 1;
+            transform: scale(1.1);
+            color: #007AFF;
+        }
     </style>
 </head>
 
@@ -515,6 +561,7 @@
     <div class="notepad-container" id="notepad-container">
         <div class="title-bar">
             <div class="title">
+                <button class="control-btn plus-btn" id="plus-btn" title="New Note">+</button>
                 <span class="title-icon">📝</span>
                 Beautiful Sticky Notepad
             </div>
@@ -531,7 +578,14 @@
                 data-placeholder="✨ Beautiful sticky notes for your productivity..."></div>
         </div>
 
-
+        <div class="notepad-toolbar">
+            <button class="toolbar-btn" id="bold-btn" title="Bold"><b>B</b></button>
+            <button class="toolbar-btn" id="italic-btn" title="Italic"><i>I</i></button>
+            <button class="toolbar-btn" id="underline-btn" title="Underline"><u>U</u></button>
+            <button class="toolbar-btn" id="strikethrough-btn" title="Strikethrough"><s>ab</s></button>
+            <button class="toolbar-btn" id="list-btn" title="Bulleted List">☰</button>
+            <button class="toolbar-btn" id="image-btn" title="Paste Image">🖼</button>
+        </div>
 
         <div class="status-bar">
             <span id="stealth-status">Stealth Mode: OFF</span>
@@ -630,6 +684,14 @@
         const ghostModeBtn = document.getElementById('ghost-mode');
         const normalModeBtn = document.getElementById('normal-mode');
         const stealthStatus = document.getElementById('stealth-status');
+        const plusBtn = document.getElementById('plus-btn');
+
+        // Toolbar buttons
+        const boldBtn = document.getElementById('bold-btn');
+        const italicBtn = document.getElementById('italic-btn');
+        const underlineBtn = document.getElementById('underline-btn');
+        const strikethroughBtn = document.getElementById('strikethrough-btn');
+        const listBtn = document.getElementById('list-btn');
 
         // Background gradients
         const backgroundGradients = {
@@ -649,6 +711,27 @@
             'sans': "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             'serif': "'Georgia', 'Times New Roman', serif"
         };
+
+        let noteId = null;
+
+        // Load saved content and settings for the specific note
+        function loadNoteContent() {
+            if (noteId) {
+                const savedContent = localStorage.getItem(`note-${noteId}`);
+                if (savedContent) {
+                    notepadTextarea.innerHTML = savedContent;
+                } else {
+                    notepadTextarea.innerHTML = 'Take a note...';
+                }
+            }
+        }
+
+        // Save content for the specific note
+        function saveNoteContent() {
+            if (noteId) {
+                localStorage.setItem(`note-${noteId}`, notepadTextarea.innerHTML);
+            }
+        }
 
         // Load saved settings
         const savedSettings = JSON.parse(localStorage.getItem('beautifulNotepadSettings') || '{}');
@@ -775,6 +858,10 @@
         }
 
         // Event listeners
+        plusBtn.addEventListener('click', () => {
+            ipcRenderer.invoke('create-new-note');
+        });
+
         window.addEventListener('beforeunload', () => {
             saveSettings();
         });
@@ -783,13 +870,33 @@
             settingsPanel.classList.toggle('show');
         });
 
-        closeBtn.addEventListener('click', () => {
-            saveSettings();
-            ipcRenderer.invoke('close-window');
+        closeBtn.addEventListener('click', async () => {
+            try {
+                await Promise.all([
+                    // Wrap synchronous operations in Promise.resolve
+                    Promise.resolve(saveSettings()),
+                    Promise.resolve(saveNoteContent())
+                ]);
+                await ipcRenderer.invoke('close-window');
+            } catch (error) {
+                console.error('Error while closing:', error);
+                // Force close if saving fails
+                ipcRenderer.invoke('close-window');
+            }
         });
 
-        minimizeBtn.addEventListener('click', () => {
-            ipcRenderer.invoke('minimize-window');
+        minimizeBtn.addEventListener('click', async () => {
+            try {
+                await Promise.all([
+                    // Wrap synchronous operations in Promise.resolve
+                    Promise.resolve(saveNoteContent())
+                ]);
+                await ipcRenderer.invoke('minimize-window');
+            } catch (error) {
+                console.error('Error while closing:', error);
+                // Force close if saving fails
+                ipcRenderer.invoke('minimize-window');
+            }
         });
 
         stealthBtn.addEventListener('click', toggleStealthMode);
@@ -809,6 +916,7 @@
         textarea.addEventListener('input', () => {
             saveSettings(); // Save on every keystroke
             updateCharCount();
+            saveNoteContent();
         });
 
         window.addEventListener("DOMContentLoaded", () => {
@@ -817,6 +925,23 @@
 
         textarea.addEventListener('blur', () => {
             saveSettings();
+        });
+
+        // Toolbar functionality
+        boldBtn.addEventListener('click', () => {
+            document.execCommand('bold', false, null);
+        });
+        italicBtn.addEventListener('click', () => {
+            document.execCommand('italic', false, null);
+        });
+        underlineBtn.addEventListener('click', () => {
+            document.execCommand('underline', false, null);
+        });
+        strikethroughBtn.addEventListener('click', () => {
+            document.execCommand('strikethrough', false, null);
+        });
+        listBtn.addEventListener('click', () => {
+            document.execCommand('insertUnorderedList', false, null);
         });
 
         // Background gradient options
@@ -940,7 +1065,11 @@
             }
         });
 
-
+        // Listen for note-id from main process
+        ipcRenderer.on('note-id', (event, newNoteId) => {
+            noteId = newNoteId;
+            loadNoteContent();
+        });
     </script>
 </body>
 
