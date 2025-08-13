@@ -215,6 +215,8 @@
             top: 40px;
             right: 12px;
             width: 240px;
+            max-height: 80vh;
+            overflow-y: auto;
             background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.8));
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 12px;
@@ -685,6 +687,7 @@
         const normalModeBtn = document.getElementById('normal-mode');
         const stealthStatus = document.getElementById('stealth-status');
         const plusBtn = document.getElementById('plus-btn');
+        const titleBar = document.getElementById('title-bar');
 
         // Toolbar buttons
         const boldBtn = document.getElementById('bold-btn');
@@ -922,6 +925,13 @@
 
         textarea.addEventListener('blur', () => {
             saveSettings();
+        });
+
+        titleBar.addEventListener('mousedown', (e) => {
+            // Only send the focus request on a left-click
+            if (e.button === 0) {
+                ipcRenderer.invoke('focus-window');
+            }
         });
 
         // Toolbar functionality

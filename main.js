@@ -11,20 +11,46 @@ const iconPath = path.join(__dirname, 'assets', 'icon.png');
 const trayIcon = nativeImage.createFromPath(iconPath);
 trayIcon.setTemplateImage(true);
 
+let windowZIndexCounter = 1;
+
+
 function createWindow(noteId = null, bounds = null) {
   // Use noteId passed, or generate a new one
   const newNoteId = noteId || `${Date.now()}`;
+
+  // Get primary display bounds
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+  // Set window dimensions
+  const windowWidth = 400;
+  const windowHeight = 300;
+
+  // Calculate center position
+  const centerX = Math.floor((screenWidth - windowWidth) / 2);
+  const centerY = Math.floor((screenHeight - windowHeight) / 2);
+
+  // Calculate offset for cascading windows
+  const offset = 30;
+
   const windowBounds = bounds || {
-    width: 400,
-    height: 300,
-    x: undefined,
-    y: undefined
+    width: windowWidth,
+    height: windowHeight,
+    x: centerX + (windows.length * offset),
+    y: centerY + (windows.length * offset)
   };
+
+  // Reset position if window would go off screen
+  if (windowBounds.x + windowBounds.width > screenWidth) {
+    windowBounds.x = centerX;
+  }
+  if (windowBounds.y + windowBounds.height > screenHeight) {
+    windowBounds.y = centerY;
+  }
 
   // Create the browser window with maximum transparency and stealth features
   const newWindow = new BrowserWindow({
-    width: 400,
-    height: 300,
+    ...windowBounds,
     frame: true, // Remove window frame completely
     transparent: false, // Enable transparency
     alwaysOnTop: true, // Keep window always on top
@@ -43,13 +69,21 @@ function createWindow(noteId = null, bounds = null) {
       contextIsolation: false,
       enableRemoteModule: true,
       backgroundThrottling: false, // Prevent throttling when not focused
-      offscreen: false
+      offscreen: false,
+      partition: 'persist:sticky-notepad',
+      webSecurity: false
     },
     show: false, // Don't show until ready
     opacity: 1.0, // Start with very low opacity
     backgroundColor: "#00000000", // Fully transparent background
     vibrancy: "ultra-dark", // macOS vibrancy effect
     visualEffectState: "active"
+  });
+
+  // Add cache configuration
+  newWindow.webContents.session.clearCache();
+  newWindow.webContents.session.clearStorageData({
+    storages: ['cache']
   });
 
   // Load the HTML file
@@ -60,7 +94,7 @@ function createWindow(noteId = null, bounds = null) {
     newWindow.show();
 
     // Set maximum stealth level
-    newWindow.setAlwaysOnTop(true, "screen-saver", 1);
+    newWindow.setAlwaysOnTop(true, "screen-saver", windowZIndexCounter++);
     newWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
     newWindow.setFullScreenable(false);
 
@@ -100,10 +134,11 @@ function createWindow(noteId = null, bounds = null) {
     }
   });
 
-  // Restore opacity when focused
   newWindow.on("focus", () => {
     if (newWindow && !newWindow.isDestroyed()) {
-      newWindow.setOpacity(0.4); // Restore to visible but still very transparent
+      // Bring the focused window to the front by updating its z-index level.
+      newWindow.setAlwaysOnTop(true, "screen-saver", windowZIndexCounter++);
+      newWindow.setOpacity(0.4);
     }
   });
 
@@ -127,6 +162,7 @@ function createWindow(noteId = null, bounds = null) {
   if (tray) {
     updateTrayMenu();
   }
+  newWindow.focus();
   return newWindow;
 }
 
@@ -373,4 +409,11 @@ ipcMain.handle("get-screen-info", () => {
     scaleFactor: display.scaleFactor,
     primary: display === screen.getPrimaryDisplay()
   }));
+});
+
+ipcMain.handle("focus-window", (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window && !window.isDestroyed()) {
+    window.focus();
+  }
 });
