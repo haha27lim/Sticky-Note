@@ -10,7 +10,13 @@
     "dist": "electron-builder --publish=never",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["notepad", "sticky", "transparent", "always-on-top", "interview"],
+  "keywords": [
+    "notepad",
+    "sticky",
+    "transparent",
+    "always-on-top",
+    "interview"
+  ],
   "build": {
     "appId": "sticky-notepad",
     "productName": "Sticky Notepad",
@@ -26,11 +32,17 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         }
       ],
       "icon": null,
@@ -50,6 +62,8 @@
   "devDependencies": {
     "electron": "^37.2.5",
     "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-store": "^10.1.0"
   }
 }
-

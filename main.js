@@ -1,13 +1,26 @@
 const { app, BrowserWindow, Menu, ipcMain, globalShortcut, screen, Tray, nativeImage } = require("electron");
 const path = require("path");
+const Store = require('electron-store').default;
 
 let windows = [];
 let tray = null;
+const store = new Store({
+  name: 'sticky-notepad-store' // Add a name for the store
+});  // Initialize the data store
 const iconPath = path.join(__dirname, 'assets', 'icon.png');
 const trayIcon = nativeImage.createFromPath(iconPath);
 trayIcon.setTemplateImage(true);
 
-function createWindow(noteId = null) {
+function createWindow(noteId = null, bounds = null) {
+  // Use noteId passed, or generate a new one
+  const newNoteId = noteId || `${Date.now()}`;
+  const windowBounds = bounds || {
+    width: 400,
+    height: 300,
+    x: undefined,
+    y: undefined
+  };
+
   // Create the browser window with maximum transparency and stealth features
   const newWindow = new BrowserWindow({
     width: 400,
@@ -62,9 +75,19 @@ function createWindow(noteId = null) {
     }
   });
 
+  // Save the window bounds when it moves or resizes
+  newWindow.on('moved', () => {
+    saveWindowPosition(newWindow, newNoteId);
+  });
+  newWindow.on('resized', () => {
+    saveWindowPosition(newWindow, newNoteId);
+  });
+
   // Handle window closed
   newWindow.on("closed", () => {
     windows = windows.filter(win => win !== newWindow);
+    store.delete(`window-bounds-${newNoteId}`); // Delete the bounds when the window is closed
+    store.set('note-ids', windows.map(win => win.noteId)); // Update the list of active notes 
     updateTrayMenu();
   });
 
@@ -94,15 +117,23 @@ function createWindow(noteId = null) {
   });
 
   newWindow.webContents.on("did-finish-load", () => {
-    newWindow.webContents.send("note-id", noteId || `${Date.now()}`);
+    newWindow.webContents.send("note-id", newNoteId);
   });
 
+  newWindow.noteId = newNoteId; // Assign the noteId to the window object
   windows.push(newWindow);
-  // Only update the tray menu if the tray exists
+  store.set('note-ids', windows.map(win => win.noteId)); // Save the new note ID
+
   if (tray) {
     updateTrayMenu();
   }
   return newWindow;
+}
+
+// Function to save the window's position and size
+function saveWindowPosition(window, noteId) {
+  const bounds = window.getBounds();
+  store.set(`window-bounds-${noteId}`, bounds);
 }
 
 function updateTrayMenu() {
@@ -191,9 +222,17 @@ app.whenReady().then(() => {
     tray.popUpContextMenu();
   });
 
-  // Now that the tray exists, create the first window and update the menu
-  createWindow();
-  updateTrayMenu(); // Initial call to set the tray menu
+  // Load existing notes on startup
+  const savedNoteIds = store.get('note-ids', []);
+  if (savedNoteIds.length > 0) {
+    savedNoteIds.forEach(noteId => {
+      const bounds = store.get(`window-bounds-${noteId}`);
+      createWindow(noteId, bounds);
+    });
+  } else {
+    createWindow();
+  }
+  updateTrayMenu();
 
   // Register enhanced global shortcuts
   globalShortcut.register("CommandOrControl+Shift+N", () => {
@@ -254,9 +293,9 @@ app.whenReady().then(() => {
 
 // Quit when all windows are closed
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+  // if (process.platform !== "darwin") {
+  //   app.quit();
+  // }
 });
 
 // Unregister all shortcuts when app is quitting
@@ -279,7 +318,7 @@ ipcMain.handle("create-new-note", () => {
 ipcMain.handle("minimize-window", (event) => {
   const window = BrowserWindow.fromWebContents(event.sender);
   if (window && !window.isDestroyed()) {
-    window.hide(); // Change hide() to minimize()
+    window.minimize(); // Change hide() to minimize()
   }
 });
 
@@ -287,9 +326,6 @@ ipcMain.handle("close-window", (event) => {
   const window = BrowserWindow.fromWebContents(event.sender);
   if (window && !window.isDestroyed()) {
     window.close();
-    // Remove from windows array
-    windows = windows.filter(win => win !== window);
-    updateTrayMenu();
   }
 });
 

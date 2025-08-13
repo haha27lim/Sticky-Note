@@ -717,26 +717,26 @@
         // Load saved content and settings for the specific note
         function loadNoteContent() {
             if (noteId) {
-                const savedContent = localStorage.getItem(`note-${noteId}`);
+                const savedContent = localStorage.getItem(`note-content-${noteId}`);
                 if (savedContent) {
-                    notepadTextarea.innerHTML = savedContent;
+                    textarea.innerHTML = savedContent;
                 } else {
-                    notepadTextarea.innerHTML = 'Take a note...';
+                    textarea.innerHTML = ''; // Start with empty content for new notes
                 }
+                updateCharCount();
             }
         }
 
         // Save content for the specific note
         function saveNoteContent() {
             if (noteId) {
-                localStorage.setItem(`note-${noteId}`, notepadTextarea.innerHTML);
+                localStorage.setItem(`note-content-${noteId}`, textarea.innerHTML);
             }
         }
 
         // Load saved settings
         const savedSettings = JSON.parse(localStorage.getItem('beautifulNotepadSettings') || '{}');
         const settings = {
-            text: savedSettings.text || '',
             opacity: savedSettings.opacity || 30,
             textColor: savedSettings.textColor || '#ffffff',
             fontSize: savedSettings.fontSize || 14,
@@ -745,11 +745,10 @@
             stealthMode: savedSettings.stealthMode || false
         };
 
-        let isStealthMode = false;
+        let isStealthMode = settings.stealthMode;
 
         // Update the saveSettings function
         function saveSettings() {
-            settings.text = textarea.innerHTML;  // Use innerHTML instead of value
             settings.opacity = parseInt(opacitySlider.value);
             settings.textColor = textColorInput.value;
             settings.fontSize = parseInt(fontSizeSlider.value);
@@ -762,9 +761,6 @@
 
         // Apply saved settings
         function applySettings() {
-            if (settings.text) {
-                textarea.innerHTML = settings.text;  // Use innerHTML instead of value
-            }
             opacitySlider.value = settings.opacity;
             opacityValue.textContent = settings.opacity;
             textColorInput.value = settings.textColor;
@@ -864,6 +860,7 @@
 
         window.addEventListener('beforeunload', () => {
             saveSettings();
+            saveNoteContent();
         });
 
         settingsBtn.addEventListener('click', () => {
@@ -1068,8 +1065,18 @@
         // Listen for note-id from main process
         ipcRenderer.on('note-id', (event, newNoteId) => {
             noteId = newNoteId;
+            applySettings();
             loadNoteContent();
         });
+
+        ipcRenderer.on('clear-note', (event, noteIdToDelete) => {
+            localStorage.removeItem(`note-content-${noteIdToDelete}`);
+        });
+
+        // Initial call to apply settings when the window first opens,
+        // before a noteId has been received. This ensures the app looks correct
+        // even before the content is loaded.
+        applySettings();
     </script>
 </body>
 
