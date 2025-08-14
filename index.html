@@ -561,7 +561,7 @@
 
 <body>
     <div class="notepad-container" id="notepad-container">
-        <div class="title-bar">
+        <div class="title-bar" id="title-bar">
             <div class="title">
                 <button class="control-btn plus-btn" id="plus-btn" title="New Note">+</button>
                 <span class="title-icon">📝</span>
@@ -929,8 +929,12 @@
 
         titleBar.addEventListener('mousedown', (e) => {
             // Only send the focus request on a left-click
-            if (e.button === 0) {
-                ipcRenderer.invoke('focus-window');
+            if (titleBar) {
+                titleBar.addEventListener('mousedown', (e) => {
+                    if (e.button === 0) {
+                        ipcRenderer.invoke('focus-window');
+                    }
+                });
             }
         });
 
